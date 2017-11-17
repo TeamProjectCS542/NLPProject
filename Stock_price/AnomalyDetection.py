@@ -19,7 +19,7 @@ def detectAnomaly(filePath):
     lowerLine = movMean - 0.1*movStd
     highLine = movMean + 0.1*movStd
     anomalyIndex = []
-    itrList = range(len(movMean)-windowlen/2)
+    itrList = range(len(movMean)-(int)(windowlen/2))
     for i in itrList:
         if math.isnan(movMean[i]) or i<windowlen/2:
             continue
