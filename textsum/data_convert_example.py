@@ -13,11 +13,12 @@ import tensorflow as tf
 from tensorflow.core.example import example_pb2
 
 FLAGS = tf.app.flags.FLAGS
-tf.app.flags.DEFINE_string('command', 'binary_to_text',
+tf.app.flags.DEFINE_string('command', 'text_to_binary',
                            'Either binary_to_text or text_to_binary.'
                            'Specify FLAGS.in_file accordingly.')
-tf.app.flags.DEFINE_string('in_file', '', 'path to file')
-tf.app.flags.DEFINE_string('out_file', '', 'path to file')
+# news_test
+tf.app.flags.DEFINE_string('in_file', '../textsum/data_news/news_test', 'path to file')
+tf.app.flags.DEFINE_string('out_file', '../textsum/data_news/bin_news_test', 'path to file')
 
 def _binary_to_text():
   reader = open(FLAGS.in_file, 'rb')
@@ -41,11 +42,26 @@ def _binary_to_text():
 def _text_to_binary():
   inputs = open(FLAGS.in_file, 'r').readlines()
   writer = open(FLAGS.out_file, 'wb')
+  count = 1
   for inp in inputs:
     tf_example = example_pb2.Example()
     for feature in inp.strip().split('\t'):
-      (k, v) = feature.split('=')
-      tf_example.features.feature[k].bytes_list.value.extend([v])
+      try:
+        (k, v) = feature.split('=')
+        tf_example.features.feature[k].bytes_list.value.extend([v])
+      except Exception as e:
+        print(count)
+        count+=1
+        print("+++++++++++++++++++++++Error+++++++++++++++++++++++")
+        print("//////////////////////inp//////////////////////////////////")
+        print(inp)
+        print("//////////////////////inp//////////////////////////////////")
+        print("//////////////////////feature//////////////////////////////////")
+        print(feature)
+        print("//////////////////////feature//////////////////////////////////")
+        print("+++++++++++++++++++++++Error+++++++++++++++++++++++")
+        print e
+        pass
     tf_example_str = tf_example.SerializeToString()
     str_len = len(tf_example_str)
     writer.write(struct.pack('q', str_len))

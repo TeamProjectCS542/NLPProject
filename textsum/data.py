@@ -68,7 +68,7 @@ class Vocab(object):
 
   def IdToWord(self, word_id):
     if word_id not in self._id_to_word:
-      raise ValueError('id not found in vocab: %d.' % word_id)
+      raise ValueError('id not found in news_vocab: %d.' % word_id)
     return self._id_to_word[word_id]
 
   def NumIds(self):

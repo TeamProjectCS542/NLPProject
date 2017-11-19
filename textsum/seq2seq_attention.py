@@ -32,9 +32,9 @@ import seq2seq_attention_model
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('data_path',
-                           '../textsum/data/bin_data_train', 'Path expression to tf.Example.')
+                           '../textsum/data_news/bin_news_train', 'Path expression to tf.Example.')
 tf.app.flags.DEFINE_string('vocab_path',
-                           '../textsum/data/vocab.txt', 'Path expression to text vocabulary file.')
+                           '../textsum/data_news/news_vocab', 'Path expression to text vocabulary file.')
 tf.app.flags.DEFINE_string('article_key', 'article',
                            'tf.Example feature key for article.')
 tf.app.flags.DEFINE_string('abstract_key', 'abstract',
@@ -44,7 +44,7 @@ tf.app.flags.DEFINE_string('train_dir', '../textsum/log_root/train', 'Directory 
 tf.app.flags.DEFINE_string('eval_dir', '', 'Directory for eval.')
 tf.app.flags.DEFINE_string('decode_dir', '../textsum/log_root/decode', 'Directory for decode summaries.')
 tf.app.flags.DEFINE_string('mode', 'train', 'train/eval/decode mode')
-tf.app.flags.DEFINE_integer('max_run_steps', 10000000,
+tf.app.flags.DEFINE_integer('max_run_steps', 1000000,
                             'Maximum number of run steps.')
 tf.app.flags.DEFINE_integer('max_article_sentences', 2,
                             'Max number of first sentences to use from the '
@@ -61,7 +61,7 @@ tf.app.flags.DEFINE_bool('use_bucketing', False,
 tf.app.flags.DEFINE_bool('truncate_input', False,
                          'Truncate inputs that are too long. If False, '
                          'examples that are too long are discarded.')
-tf.app.flags.DEFINE_integer('num_gpus', 0, 'Number of gpus used.')
+tf.app.flags.DEFINE_integer('num_gpus', 1, 'Number of gpus used.')
 tf.app.flags.DEFINE_integer('random_seed', 111, 'A seed value for randomness.')
 
 
@@ -175,7 +175,7 @@ def main(unused_argv):
       lr=0.15,  # learning rate
       batch_size=batch_size,
       enc_layers=4,
-      enc_timesteps=120,
+      enc_timesteps=120,#120,
       dec_timesteps=30,
       min_input_len=2,  # discard articles/summaries < than this
       num_hidden=256,  # for rnn cell
