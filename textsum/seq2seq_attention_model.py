@@ -66,37 +66,49 @@ class Seq2SeqAttentionModel(object):
     self._vocab = vocab
     self._num_gpus = num_gpus
     self._cur_gpu = 0
-
-  def run_train_step(self, sess, article_batch, abstract_batch, targets,
-                     article_lens, abstract_lens, loss_weights):
+  
+    
+   #Xinchun: added anomPrice_batch, pricelist_lens
+  def run_train_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+                     article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._train_op, self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
+                               self._anomPrice: anomPrice_batch,
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
+                               self._pricelist_lens: pricelist_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
-  def run_eval_step(self, sess, article_batch, abstract_batch, targets,
-                    article_lens, abstract_lens, loss_weights):
+    
+   #Xinchun: added anomPrice_batch, pricelist_lens
+  def run_eval_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+                    article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
+                               self._anomPrice: anomPrice_batch,
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
+                               self._pricelist_lens: pricelist_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
-  def run_decode_step(self, sess, article_batch, abstract_batch, targets,
-                      article_lens, abstract_lens, loss_weights):
+  
+   #Xinchun: added anomPrice_batch, pricelist_lens
+  def run_decode_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+                      article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._outputs, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
+                               self._anomPrices: anomPrice_batch,
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
+                               self._pricelist_lens: pricelist_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
@@ -117,6 +129,10 @@ class Seq2SeqAttentionModel(object):
   def _add_placeholders(self):
     """Inputs to be fed to the graph."""
     hps = self._hps
+    #Xinchun: add placeholder for sequence of anomaly prices
+    self._anomPrices = tf.placeholder(tf.int32, [hps.batch_size, hps.enc_timesteps],
+                                      name = 'anomPrices')
+    
     self._articles = tf.placeholder(tf.int32,
                                     [hps.batch_size, hps.enc_timesteps],
                                     name='articles')
@@ -128,6 +144,8 @@ class Seq2SeqAttentionModel(object):
                                    name='targets')
     self._article_lens = tf.placeholder(tf.int32, [hps.batch_size],
                                         name='article_lens')
+    self._pricelist_lens = tf.placeholder(tf.int32, [hps.batch_size],
+                                          name='pricelist_lens')
     self._abstract_lens = tf.placeholder(tf.int32, [hps.batch_size],
                                          name='abstract_lens')
     self._loss_weights = tf.placeholder(tf.float32,
@@ -139,6 +157,10 @@ class Seq2SeqAttentionModel(object):
     vsize = self._vocab.NumIds()
 
     with tf.variable_scope('seq2seq'):
+      #Xinchun: add encoder for stock price sequence  
+      encoderPrice_inputs = tf.unstack(tf.transpose(self._anomPrices))
+      pricelist_lens = self._pricelist_lens
+    
       encoder_inputs = tf.unstack(tf.transpose(self._articles))
       decoder_inputs = tf.unstack(tf.transpose(self._abstracts))
       targets = tf.unstack(tf.transpose(self._targets))
@@ -154,6 +176,13 @@ class Seq2SeqAttentionModel(object):
                               for x in encoder_inputs]
         emb_decoder_inputs = [tf.nn.embedding_lookup(embedding, x)
                               for x in decoder_inputs]
+        
+        #Xinchun: added price encoder embedding
+        embeddingPrice = tf.get_variable(
+            'embeddingPrice', [vsize, 0], dtype=tf.float32,
+            initializer=tf.truncated_normal_initializer(stddev=1e-4))
+        emb_encoderPrice_inputs = [tf.nn.embedding_lookup(embeddingPrice, x)
+                                    for x in encoderPrice_inputs]
 
       for layer_i in xrange(hps.enc_layers):
         with tf.variable_scope('encoder%d'%layer_i), tf.device(
@@ -169,7 +198,28 @@ class Seq2SeqAttentionModel(object):
           (emb_encoder_inputs, fw_state, _) = tf.contrib.rnn.static_bidirectional_rnn(
               cell_fw, cell_bw, emb_encoder_inputs, dtype=tf.float32,
               sequence_length=article_lens)
-      encoder_outputs = emb_encoder_inputs
+        encoder_outputs = emb_encoder_inputs
+        
+        
+     #Xinchun: add another encoder for anomPrice
+      
+      for layer_i in xrange(hps.enc_layers):
+        with tf.variable_scope('encoderPrice%d'%layer_i), tf.device(
+            self._next_device()):
+          cellPrice_fw = tf.contrib.rnn.LSTMCell(
+              hps.num_hidden,
+              initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=123),
+              state_is_tuple=False)
+          cellPrice_bw = tf.contrib.rnn.LSTMCell(
+              hps.num_hidden,
+              initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=113),
+              state_is_tuple=False)
+          (emb_encoderPrice_inputs, fwPrice_state, _) = tf.contrib.rnn.static_bidirectional_rnn(
+              cellPrice_fw, cellPrice_bw, emb_encoderPrice_inputs, dtype=tf.float32,
+              sequence_length=pricelist_lens)
+          encoderPrice_outputs = emb_encoderPrice_inputs
+        
+    
 
       with tf.variable_scope('output_projection'):
         w = tf.get_variable(
@@ -195,8 +245,16 @@ class Seq2SeqAttentionModel(object):
 
         encoder_outputs = [tf.reshape(x, [hps.batch_size, 1, 2*hps.num_hidden])
                            for x in encoder_outputs]
-        self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
-        self._dec_in_state = fw_state
+        #Xinchun: added encoderPrice_outputs
+        encoderPrice_outputs = [tf.reshape(x, [hps.batch_size, 1, 2*hps.num_hidden])
+                                for x in encoderPrice_outputs]
+        
+        #Xinchun: modified _enc_top_states and _dec_in_state
+        self._enc_top_states = tf.concat(axis = 1, values = tf.concat((encoder_outputs, encoderPrice_outputs), 1))
+        self._dec_in_state = tf.concat(fw_state, fwPrice_state)
+        #self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
+        #self._dec_in_state = fw_state
+        
         # During decoding, follow up _dec_in_state are fed from beam_search.
         # dec_out_state are stored by beam_search for next step feeding.
         initial_state_attention = (hps.mode == 'decode')
