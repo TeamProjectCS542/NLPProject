@@ -31,7 +31,7 @@ import pandas as pd
 import data
 
 ModelInput = namedtuple('ModelInput',
-                        'enc_input dec_input target enc_len dec_len '
+                        'enc2_input enc_input dec_input target enc_len dec_len '
                         'origin_article origin_abstract')
 
 BUCKET_CACHE_BATCH = 100
@@ -177,17 +177,19 @@ class Batcher(object):
       #get price from the datafile
       price = stockPriceDF[stockPriceDF['company'] == company]
       price = price[stockPriceDF['date'] == newsDate]
+      # print(Key)
+      # print(price)
+      # print("-----------------")
       try:
         for i in reversed(range(self._hps.enc2_anoPrices)):
           stockPrices.append(stockPriceDF.loc[[price.index.values[0] - i]]['price'].values[0])
       except Exception as e:
-        print e
-        pass
+        # print e
+        # print("price error")
+        #if error, then skip this one
+        continue
 
       enc2_inputs = stockPrices
-
-
-
 
       enc_inputs = []
       # Use the <s> as the <GO> symbol for decoder inputs.

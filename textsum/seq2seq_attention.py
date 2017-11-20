@@ -178,10 +178,7 @@ def main(unused_argv):
       batch_size=batch_size,
       enc_layers=4,
       enc_timesteps=120,#120,
-
-      #Jenkai, add anoPrice input length
-      enc2_anoPrices=5,
-
+      enc2_anoPrices=5,#Jenkai, add anoPrice input length
       dec_timesteps=30,
       min_input_len=2,  # discard articles/summaries < than this
       num_hidden=256,  # for rnn cell

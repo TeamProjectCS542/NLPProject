@@ -24,7 +24,7 @@ import tensorflow as tf
 
 HParams = namedtuple('HParams',
                      'mode, min_lr, lr, batch_size, '
-                     'enc_layers, enc_timesteps, dec_timesteps, '
+                     'enc_layers, enc_timesteps, enc2_anoPrices, dec_timesteps, '
                      'min_input_len, num_hidden, emb_dim, max_grad_norm, '
                      'num_softmax_samples')
 

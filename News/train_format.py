@@ -8,12 +8,14 @@ Created on Mon Nov 13 19:24:18 2017
 
 import pickle
 
-def news_dict2txt(dictFilePath):
+def news_dict2txt(dictFilePath, CompanyName):
     with open(dictFilePath, 'rb') as fp:
         news_dict = pickle.load(fp)
         fp.close()
     news_list = []
-    for i in news_dict.values():
+    for key, i in news_dict.items():
+        print(key)
+        print(i)
         for j in i:
             train_text = "article=<d> <p> <s> "
             news = j[1].split('.')
@@ -25,7 +27,7 @@ def news_dict2txt(dictFilePath):
                 z = ' '.join(z.split())
                 train_text = train_text + z + " . </s> <s> "
             #Add the \t symbol
-            train_text = train_text[:-5] + " </p> </d>\tabstract=<d> <p> <s> " + j[0] + " . </s> </p> </d>"
+            train_text = train_text[:-5] + " <s> "+str(key)+"&"+CompanyName+" </s> </p> </d>\tabstract=<d> <p> <s> " + j[0] + " . </s> </p> </d>"
             skip = False
             for feature in train_text.strip().split('\t'):
                 if len(feature.split('=')) != 2:
@@ -72,6 +74,6 @@ def vocab_fre(filePath):
             vo.write(line + '\n')
 
     
-# news_dict2txt('../news/Facebook_news')
+news_dict2txt('../news/Facebook_news','FB')
 # vocal_count('../news/Facebook_news')
-vocab_fre('../News/Facebook_news')
+# vocab_fre('../News/Facebook_news')
