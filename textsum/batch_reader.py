@@ -26,6 +26,8 @@ from six.moves import queue as Queue
 from six.moves import xrange
 import tensorflow as tf
 
+import pandas as pd
+
 import data
 
 ModelInput = namedtuple('ModelInput',
@@ -34,6 +36,7 @@ ModelInput = namedtuple('ModelInput',
 
 BUCKET_CACHE_BATCH = 100
 QUEUE_NUM_BATCH = 100
+
 
 
 class Batcher(object):
@@ -95,6 +98,11 @@ class Batcher(object):
       origin_articles: original article words.
       origin_abstracts: original abstract words.
     """
+
+    """Jenkai: add anoPrice batch"""
+    enc2_batch = np.zeros(
+        (self._hps.batch_size, self._hps.enc2_anoPrices), dtype=np.int32)
+
     enc_batch = np.zeros(
         (self._hps.batch_size, self._hps.enc_timesteps), dtype=np.int32)
     enc_input_lens = np.zeros(
@@ -112,19 +120,28 @@ class Batcher(object):
 
     buckets = self._bucket_input_queue.get()
     for i in xrange(self._hps.batch_size):
-      (enc_inputs, dec_inputs, targets, enc_input_len, dec_output_len,
+      """
+      Jenkai: add encoder2 input
+      """
+      (enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len, dec_output_len,
        article, abstract) = buckets[i]
 
       origin_articles[i] = article
       origin_abstracts[i] = abstract
       enc_input_lens[i] = enc_input_len
       dec_output_lens[i] = dec_output_len
+
+      """Jenkai: add encoder2 batch input"""
+      enc2_batch[i, :] = enc2_inputs[:]
+
       enc_batch[i, :] = enc_inputs[:]
       dec_batch[i, :] = dec_inputs[:]
       target_batch[i, :] = targets[:]
       for j in xrange(dec_output_len):
         loss_weights[i][j] = 1
-    return (enc_batch, dec_batch, target_batch, enc_input_lens, dec_output_lens,
+
+    """Jenkai: add encoder2 batch input"""
+    return (enc2_batch, enc_batch, dec_batch, target_batch, enc_input_lens, dec_output_lens,
             loss_weights, origin_articles, origin_abstracts)
 
   def _FillInputQueue(self):
@@ -133,12 +150,44 @@ class Batcher(object):
     end_id = self._vocab.WordToId(data.SENTENCE_END)
     pad_id = self._vocab.WordToId(data.PAD_TOKEN)
     input_gen = self._TextGenerator(data.ExampleGen(self._data_path))
+
+    """Jenkai: read stock price file"""
+    stockPriceDF = pd.read_csv("../Stock_price/stockPrice.csv")
+    stockPriceDF.columns = ['date', 'price', 'company']
+    stockPriceDF.columns = ['date', 'price', 'company']
+    stockPriceDF[['date', 'company']] = stockPriceDF[['date', 'company']].astype(str)
+    stockPriceDF[['price']] = stockPriceDF[['price']].astype(float)
+
     while True:
       (article, abstract) = six.next(input_gen)
       article_sentences = [sent.strip() for sent in
                            data.ToSentences(article, include_token=False)]
       abstract_sentences = [sent.strip() for sent in
                             data.ToSentences(abstract, include_token=False)]
+
+      """
+      #Jenkai: get article date, it stores in the last sentence
+      #Format: YYYY-MM-DD&CompanyName
+      """
+      stockPrices = []
+      Key = article_sentences[len(article_sentences)-1]
+      newsDate = Key.split('&')[0]
+      company = Key.split('&')[1]
+
+      #get price from the datafile
+      price = stockPriceDF[stockPriceDF['company'] == company]
+      price = price[stockPriceDF['date'] == newsDate]
+      try:
+        for i in reversed(range(self._hps.enc2_anoPrices)):
+          stockPrices.append(stockPriceDF.loc[[price.index.values[0] - i]]['price'].values[0])
+      except Exception as e:
+        print e
+        pass
+
+      enc2_inputs = stockPrices
+
+
+
 
       enc_inputs = []
       # Use the <s> as the <GO> symbol for decoder inputs.
@@ -191,7 +240,10 @@ class Batcher(object):
       while len(targets) < self._hps.dec_timesteps:
         targets.append(end_id)
 
-      element = ModelInput(enc_inputs, dec_inputs, targets, enc_input_len,
+      """
+      Jenkai: Add anomaly price encoder2 input
+      """
+      element = ModelInput(enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len,
                            dec_output_len, ' '.join(article_sentences),
                            ' '.join(abstract_sentences))
       self._input_queue.put(element)
@@ -263,3 +315,4 @@ class Batcher(object):
       feature: a feature text extracted.
     """
     return ex.features.feature[key].bytes_list.value[0]
+

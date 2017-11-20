@@ -66,10 +66,9 @@ class Seq2SeqAttentionModel(object):
     self._vocab = vocab
     self._num_gpus = num_gpus
     self._cur_gpu = 0
-  
-    
+
    #Xinchun: added anomPrice_batch, pricelist_lens
-  def run_train_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+  def run_train_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
                      article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._train_op, self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
@@ -78,13 +77,13 @@ class Seq2SeqAttentionModel(object):
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: pricelist_lens,
+                               self._pricelist_lens: self._hps.enc2_anoPrices,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
-    
+
    #Xinchun: added anomPrice_batch, pricelist_lens
-  def run_eval_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+  def run_eval_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
                     article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
@@ -93,13 +92,13 @@ class Seq2SeqAttentionModel(object):
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: pricelist_lens,
+                               self._pricelist_lens: self._hps.enc2_anoPrices,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
   
    #Xinchun: added anomPrice_batch, pricelist_lens
-  def run_decode_step(self, sess, article_batch, anomPrice_batch, abstract_batch, targets,
+  def run_decode_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
                       article_lens, pricelist_lens, abstract_lens, loss_weights):
     to_return = [self._outputs, self.global_step]
     return sess.run(to_return,
@@ -108,7 +107,7 @@ class Seq2SeqAttentionModel(object):
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: pricelist_lens,
+                               self._pricelist_lens: self._hps.enc2_anoPrices,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
