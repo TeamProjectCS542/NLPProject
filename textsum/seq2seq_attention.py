@@ -100,11 +100,11 @@ def _Train(model, data_batcher):
     step = 0
     while not sv.should_stop() and step < FLAGS.max_run_steps:
       """Jenkai: add price batch"""
-      (anoPrice_batch, article_batch, abstract_batch, targets, article_lens, abstract_lens,
+      (anoPrice_batch, article_batch, abstract_batch, targets, article_lens, price_lens,abstract_lens,
        loss_weights, _, _) = data_batcher.NextBatch()
       """Jenkai: add price batch"""
       (_, summaries, loss, train_step) = model.run_train_step(
-          sess, anoPrice_batch, article_batch, abstract_batch, targets, article_lens,
+          sess, anoPrice_batch, article_batch, abstract_batch, targets, article_lens, price_lens,
           abstract_lens, loss_weights)
 
       summary_writer.add_summary(summaries, train_step)
@@ -140,10 +140,10 @@ def _Eval(model, data_batcher, vocab=None):
     tf.logging.info('Loading checkpoint %s', ckpt_state.model_checkpoint_path)
     saver.restore(sess, ckpt_state.model_checkpoint_path)
 
-    (anoPrice_batch, article_batch, abstract_batch, targets, article_lens, abstract_lens,
+    (anoPrice_batch, article_batch, abstract_batch, targets, article_lens, price_lens, abstract_lens,
      loss_weights, _, _) = data_batcher.NextBatch()
     (summaries, loss, train_step) = model.run_eval_step(
-        sess, anoPrice_batch, article_batch, abstract_batch, targets, article_lens,
+        sess, anoPrice_batch, article_batch, abstract_batch, targets, article_lens, price_lens,
         abstract_lens, loss_weights)
     tf.logging.info(
         'article:  %s',
@@ -181,7 +181,7 @@ def main(unused_argv):
       enc2_anoPrices=5,#Jenkai, add anoPrice input length
       dec_timesteps=30,
       min_input_len=2,  # discard articles/summaries < than this
-      num_hidden=256,  # for rnn cell
+      num_hidden=128,  # for rnn cell
       emb_dim=128,  # If 0, don't use embedding
       max_grad_norm=2,
       num_softmax_samples=4096)  # If 0, no sampled softmax.

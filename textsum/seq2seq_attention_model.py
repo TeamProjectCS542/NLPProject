@@ -69,37 +69,37 @@ class Seq2SeqAttentionModel(object):
 
    #Xinchun: added anomPrice_batch, pricelist_lens
   def run_train_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
-                     article_lens, pricelist_lens, abstract_lens, loss_weights):
+                     article_lens, price_lens, abstract_lens, loss_weights):
     to_return = [self._train_op, self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
-                               self._anomPrice: anomPrice_batch,
+                               self._anomPrices: anomPrice_batch,
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: self._hps.enc2_anoPrices,
+                               self._pricelist_lens: price_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
 
    #Xinchun: added anomPrice_batch, pricelist_lens
   def run_eval_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
-                    article_lens, pricelist_lens, abstract_lens, loss_weights):
+                    article_lens, price_lens, abstract_lens, loss_weights):
     to_return = [self._summaries, self._loss, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
-                               self._anomPrice: anomPrice_batch,
+                               self._anomPrices: anomPrice_batch,
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: self._hps.enc2_anoPrices,
+                               self._pricelist_lens: price_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
   
    #Xinchun: added anomPrice_batch, pricelist_lens
   def run_decode_step(self, sess, anomPrice_batch, article_batch, abstract_batch, targets,
-                      article_lens, pricelist_lens, abstract_lens, loss_weights):
+                      article_lens, price_lens, abstract_lens, loss_weights):
     to_return = [self._outputs, self.global_step]
     return sess.run(to_return,
                     feed_dict={self._articles: article_batch,
@@ -107,7 +107,7 @@ class Seq2SeqAttentionModel(object):
                                self._abstracts: abstract_batch,
                                self._targets: targets,
                                self._article_lens: article_lens,
-                               self._pricelist_lens: self._hps.enc2_anoPrices,
+                               self._pricelist_lens: price_lens,
                                self._abstract_lens: abstract_lens,
                                self._loss_weights: loss_weights})
 
@@ -217,7 +217,7 @@ class Seq2SeqAttentionModel(object):
               cellPrice_fw, cellPrice_bw, emb_encoderPrice_inputs, dtype=tf.float32,
               sequence_length=pricelist_lens)
           encoderPrice_outputs = emb_encoderPrice_inputs
-        
+
     
 
       with tf.variable_scope('output_projection'):
@@ -246,13 +246,25 @@ class Seq2SeqAttentionModel(object):
                            for x in encoder_outputs]
         #Xinchun: added encoderPrice_outputs
         encoderPrice_outputs = [tf.reshape(x, [hps.batch_size, 1, 2*hps.num_hidden])
-                                for x in encoderPrice_outputs]
-        
+                                for x
+                                in encoderPrice_outputs]
+
+        """
+        Jenkai: modified the shape of self._enc_top_state, shape=(4, 240, 512)
+        and self._dec_in_state, shape=(4, 1024)
+        need to verify it's correctness
+        """
         #Xinchun: modified _enc_top_states and _dec_in_state
-        self._enc_top_states = tf.concat(axis = 1, values = tf.concat((encoder_outputs, encoderPrice_outputs), 1))
-        self._dec_in_state = tf.concat(fw_state, fwPrice_state)
-        #self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
-        #self._dec_in_state = fw_state
+        selfConcatEncoder1 = tf.concat((encoder_outputs), 1)
+        selfConcatEncoder2 = tf.concat((encoderPrice_outputs), 1)
+        self._enc_top_states = tf.concat([selfConcatEncoder1,selfConcatEncoder2], 1)#tf.concat(axis = 1, values = tf.concat((encoder_outputs, encoderPrice_outputs), 1))
+        self._dec_in_state = tf.concat((fw_state, fwPrice_state), 1)
+        # self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
+        # self._dec_in_state = fw_state
+
+        # print(emb_decoder_inputs)
+        # print(self._dec_in_state)
+        # print(self._enc_top_states)
         
         # During decoding, follow up _dec_in_state are fed from beam_search.
         # dec_out_state are stored by beam_search for next step feeding.

@@ -31,7 +31,7 @@ import pandas as pd
 import data
 
 ModelInput = namedtuple('ModelInput',
-                        'enc2_input enc_input dec_input target enc_len dec_len '
+                        'enc2_input enc_input dec_input target enc_len enc2_len dec_len '
                         'origin_article origin_abstract')
 
 BUCKET_CACHE_BATCH = 100
@@ -99,9 +99,12 @@ class Batcher(object):
       origin_abstracts: original abstract words.
     """
 
-    """Jenkai: add anoPrice batch"""
+    """Jenkai: add anoPrice batch and price encoder input"""
     enc2_batch = np.zeros(
-        (self._hps.batch_size, self._hps.enc2_anoPrices), dtype=np.int32)
+        (self._hps.batch_size, self._hps.enc_timesteps), dtype=np.int32)
+    enc2_input_price_lens = np.zeros(
+      (self._hps.batch_size), dtype=np.int32)
+
 
     enc_batch = np.zeros(
         (self._hps.batch_size, self._hps.enc_timesteps), dtype=np.int32)
@@ -121,10 +124,11 @@ class Batcher(object):
     buckets = self._bucket_input_queue.get()
     for i in xrange(self._hps.batch_size):
       """
-      Jenkai: add encoder2 input
+      Jenkai: add encoder2 input 
       """
-      (enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len, dec_output_len,
+      (enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len, encs_input_price_len,dec_output_len,
        article, abstract) = buckets[i]
+      enc2_input_price_lens[i] = enc_input_len
 
       origin_articles[i] = article
       origin_abstracts[i] = abstract
@@ -141,7 +145,7 @@ class Batcher(object):
         loss_weights[i][j] = 1
 
     """Jenkai: add encoder2 batch input"""
-    return (enc2_batch, enc_batch, dec_batch, target_batch, enc_input_lens, dec_output_lens,
+    return (enc2_batch, enc_batch, dec_batch, target_batch, enc_input_lens, enc2_input_price_lens,dec_output_lens,
             loss_weights, origin_articles, origin_abstracts)
 
   def _FillInputQueue(self):
@@ -189,6 +193,12 @@ class Batcher(object):
         #if error, then skip this one
         continue
 
+      """
+      #Jenkai: append 0, let the length of price reach 120 
+      """
+      while len(stockPrices) < self._hps.enc_timesteps:
+        stockPrices.append(0)
+
       enc2_inputs = stockPrices
 
       enc_inputs = []
@@ -231,6 +241,11 @@ class Batcher(object):
       # Now len(enc_inputs) should be <= enc_timesteps, and
       # len(targets) = len(dec_inputs) should be <= dec_timesteps
 
+      """
+      Jenkai: Add price length input
+      """
+      enc2_inputs_len = len(enc2_inputs)
+
       enc_input_len = len(enc_inputs)
       dec_output_len = len(targets)
 
@@ -245,7 +260,7 @@ class Batcher(object):
       """
       Jenkai: Add anomaly price encoder2 input
       """
-      element = ModelInput(enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len,
+      element = ModelInput(enc2_inputs, enc_inputs, dec_inputs, targets, enc_input_len, enc2_inputs_len,
                            dec_output_len, ' '.join(article_sentences),
                            ' '.join(abstract_sentences))
       self._input_queue.put(element)
