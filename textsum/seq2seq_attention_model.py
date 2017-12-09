@@ -49,11 +49,14 @@ def _extract_argmax_and_embed(embedding, output_projection=None,
       prev = tf.nn.xw_plus_b(
           prev, output_projection[0], output_projection[1])
     prev_symbol = tf.argmax(prev, 1)
+    print(prev)
+    print('==========================')
     # Note that gradients will not propagate through the second parameter of
     # embedding_lookup.
     emb_prev = tf.nn.embedding_lookup(embedding, prev_symbol)
     if not update_embedding:
       emb_prev = tf.stop_gradient(emb_prev)
+    print(emb_prev)
     return emb_prev
   return loop_function
 
@@ -234,6 +237,8 @@ class Seq2SeqAttentionModel(object):
         # for the next step.
         loop_function = None
         if hps.mode == 'decode':
+          print("calling loop function")
+          print("----------------------------")
           loop_function = _extract_argmax_and_embed(
               embedding, (w, v), update_embedding=False)
 
@@ -255,11 +260,13 @@ class Seq2SeqAttentionModel(object):
         need to verify it's correctness
         """
         #Xinchun: modified _enc_top_states and _dec_in_state
-        selfConcatEncoder1 = tf.concat((encoder_outputs), 1)
+        print("111111111111111")
+	selfConcatEncoder1 = tf.concat((encoder_outputs), 1)
         selfConcatEncoder2 = tf.concat((encoderPrice_outputs), 1)
         self._enc_top_states = tf.concat([selfConcatEncoder1,selfConcatEncoder2], 1)#tf.concat(axis = 1, values = tf.concat((encoder_outputs, encoderPrice_outputs), 1))
-        self._dec_in_state = tf.concat((fw_state, fwPrice_state), 1)
-        # self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
+        self._dec_in_state = tf.add(fw_state, fwPrice_state)
+        print("222222222222222")
+	# self._enc_top_states = tf.concat(axis=1, values=encoder_outputs)
         # self._dec_in_state = fw_state
 
         # print(emb_decoder_inputs)
@@ -273,7 +280,7 @@ class Seq2SeqAttentionModel(object):
             emb_decoder_inputs, self._dec_in_state, self._enc_top_states,
             cell, num_heads=1, loop_function=loop_function,
             initial_state_attention=initial_state_attention)
-
+	print("3333333333333333")
       with tf.variable_scope('output'), tf.device(self._next_device()):
         model_outputs = []
         for i in xrange(len(decoder_outputs)):
@@ -326,7 +333,10 @@ class Seq2SeqAttentionModel(object):
     self._train_op = optimizer.apply_gradients(
         zip(grads, tvars), global_step=self.global_step, name='train_step')
 
-  def encode_top_state(self, sess, enc_inputs, enc_len):
+  """
+  Jenkai: Add encoder2
+  """
+  def encode_top_state(self, sess, enc_inputs, enc_len, enc2_inputs, enc2_len):
     """Return the top states from encoder for decoder.
 
     Args:
@@ -339,7 +349,8 @@ class Seq2SeqAttentionModel(object):
     """
     results = sess.run([self._enc_top_states, self._dec_in_state],
                        feed_dict={self._articles: enc_inputs,
-                                  self._article_lens: enc_len})
+                                  self._article_lens: enc_len, self._anomPrices: enc2_inputs,
+                                  self._pricelist_lens: enc2_len})
     return results[0], results[1][0]
 
   def decode_topk(self, sess, latest_tokens, enc_top_states, dec_init_states):

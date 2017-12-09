@@ -125,7 +125,7 @@ class BSDecoder(object):
 
     self._decode_io.ResetFiles()
     for _ in xrange(FLAGS.decode_batches_per_ckpt):
-      (article_batch, _, _, article_lens, _, _, origin_articles,
+      (anoPrice_batch, article_batch, abstract_batch, targets, article_lens, price_lens, abstract_lens,loss_weights, origin_articles,
        origin_abstracts) = self._batch_reader.NextBatch()
       for i in xrange(self._hps.batch_size):
         bs = beam_search.BeamSearch(
@@ -134,11 +134,17 @@ class BSDecoder(object):
             self._vocab.WordToId(data.SENTENCE_END),
             self._hps.dec_timesteps)
 
+        """Jenkai: add price batch"""
+        anoPrice_batch_cp = anoPrice_batch.copy()
+        anoPrice_batch_cp[:] = anoPrice_batch[i:i + 1]
+        price_lens_cp = price_lens.copy()
+        price_lens_cp[:] = price_lens_cp[i:i + 1]
+
         article_batch_cp = article_batch.copy()
         article_batch_cp[:] = article_batch[i:i+1]
         article_lens_cp = article_lens.copy()
         article_lens_cp[:] = article_lens[i:i+1]
-        best_beam = bs.BeamSearch(sess, article_batch_cp, article_lens_cp)[0]
+        best_beam = bs.BeamSearch(sess, article_batch_cp, article_lens_cp, anoPrice_batch_cp, price_lens_cp)[0]
         decode_output = [int(t) for t in best_beam.tokens[1:]]
         self._DecodeBatch(
             origin_articles[i], origin_abstracts[i], decode_output)

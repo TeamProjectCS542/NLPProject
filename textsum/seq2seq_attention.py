@@ -32,7 +32,7 @@ import seq2seq_attention_model
 
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('data_path',
-                           '../textsum/data_news/bin_news_train', 'Path expression to tf.Example.')
+                           '../textsum/data_news/bin_news_test', 'Path expression to tf.Example.')
 tf.app.flags.DEFINE_string('vocab_path',
                            '../textsum/data_news/news_vocab', 'Path expression to text vocabulary file.')
 tf.app.flags.DEFINE_string('article_key', 'article',
@@ -43,7 +43,7 @@ tf.app.flags.DEFINE_string('log_root', '../textsum/log_root', 'Directory for mod
 tf.app.flags.DEFINE_string('train_dir', '../textsum/log_root/train', 'Directory for train.')
 tf.app.flags.DEFINE_string('eval_dir', '', 'Directory for eval.')
 tf.app.flags.DEFINE_string('decode_dir', '../textsum/log_root/decode', 'Directory for decode summaries.')
-tf.app.flags.DEFINE_string('mode', 'train', 'train/eval/decode mode')
+tf.app.flags.DEFINE_string('mode', 'decode', 'train/eval/decode mode')
 tf.app.flags.DEFINE_integer('max_run_steps', 1000000,
                             'Maximum number of run steps.')
 tf.app.flags.DEFINE_integer('max_article_sentences', 2,
