@@ -136,15 +136,20 @@ def news_dict2txt(NewsPaths, Companys):
 
     #Slice data into test and train
     shuffle(news_list)
-    slice1 = int(len(news_list) * 0.9)
+    slice1 = int(len(news_list) * 0.8)
+    slice2 = int(len(news_list) * 0.9)
     train_data = news_list[0:slice1]
-    test_data = news_list[slice1: len(news_list)]
+    test_data = news_list[slice1:slice2]
+    valid_data = news_list[slice2: len(news_list)]
 
     with open('/Users/kylemiao/Documents/GitHub/Project/NLPProject/News/new_train_news', 'w') as fp:
         for i in train_data:
             print(i + "\r", file = fp)
     with open('/Users/kylemiao/Documents/GitHub/Project/NLPProject/News/new_test_news', 'w') as fp:
         for i in test_data:
+            print(i + "\r", file = fp)
+    with open('/Users/kylemiao/Documents/GitHub/Project/NLPProject/News/new_valid_news', 'w') as fp:
+        for i in valid_data:
             print(i + "\r", file = fp)
     return whole_txt;
 
