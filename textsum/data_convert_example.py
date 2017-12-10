@@ -17,8 +17,8 @@ tf.app.flags.DEFINE_string('command', 'text_to_binary',
                            'Either binary_to_text or text_to_binary.'
                            'Specify FLAGS.in_file accordingly.')
 # news_test
-tf.app.flags.DEFINE_string('in_file', '../textsum/data_news/news_train', 'path to file')
-tf.app.flags.DEFINE_string('out_file', '../textsum/data_news/bin_news_train', 'path to file')
+tf.app.flags.DEFINE_string('in_file', '../textsum/data_all_news/new_train_news', 'path to file')
+tf.app.flags.DEFINE_string('out_file', '../textsum/data_all_news/bin_news_train', 'path to file')
 
 def _binary_to_text():
   reader = open(FLAGS.in_file, 'rb')
