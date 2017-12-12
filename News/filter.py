@@ -1,6 +1,6 @@
 import datetime
 import pickle
-with open('./Apple_news', 'rb') as fp:
+with open('./Facebook_news', 'rb') as fp:
     fb_dict = pickle.load(fp)
     #print(fb_dict)
     fp.close()
@@ -22,7 +22,7 @@ for keys in fb_dict.keys():
 fb = []
 k = 0
 import csv
-with open('stockPrice.csv') as csvfile:
+with open('stockPrice1.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         if row['Company'] == 'AAPL':
@@ -42,12 +42,12 @@ for j in key_list:
 result_list = []
 for l in range(len(fb)):
     if fb[l] in train_list:#
-        result_list.append([fb[l-1]['Mean'],fb[l]['Mean'], 1])
+        result_list.append([fb[l-1]['Mean'],fb[l]['Open'], 1])
     else:
-        result_list.append([fb[l-1]['Mean'],fb[l]['Mean'], 0])
+        result_list.append([fb[l-1]['Mean'],fb[l]['Open'], 0])
 import pandas as pd
 df = pd.DataFrame(result_list)
-df.to_csv('apple_output.csv',index = False)
+df.to_csv('fb_output1.csv',index = False)
 
 import numpy as np
 train = int(0.7*len(result_list))
